@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Collection</title>
+    <style>
+        html {
+            color-scheme: light dark;
+        }
+        
+        body {
+            font-family: system-ui;
+            font-size: 1.125rem;
+            line-height: 1.6;
+        }
+        
+        img,
+        picture,
+        svg {
+            max-width: 100%;
+            display: block;
+        }
+        
+        main {
+            width: min(80ch, 100% - 4rem);
+            margin-inline: auto;
+        }
+        main > * {
+            margin: auto;
+        }
+
+        .page {
+            display: none;
+        }
+        #mainPageButtonList {
+            margin: auto;
+        }
+
+        #summaryMusic { font-size: 1.1em; margin-bottom: 1em; font-weight: bold; }
+    </style>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+</head>
+<body>
+    <div class="page" id="page_">
+        <main>
+            <h1 style="text-align: center;">Le Media de Coleccion</h1>
+            <div id="mainPageButtonList">
+                <a href="#music">Music</a>
+                <a href="#movies">Movies</a>
+                <a href="#games">Games</a>
+            </div>
+        </main>
+    </div>
+    <div class="page" id="page_music">
+        <p id="summaryMusic"><em>Loading summary...</em></p>
+        <table id="tableMusic" class="display"></table>
+    </div>
+    <div class="page" id="page_movies">
+        <main>
+            <h1 id="test">WIP</h1>
+        </main>
+    </div>
+    <div class="page" id="page_games">
+        <main>
+            <h1 id="test">WIP</h1>
+        </main>
+    </div>
+
+    <!-- Libraries -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+    <script>
+        window.addEventListener("load", function (e) {
+            const fragment = window.location.hash.substring(1);
+            windowUpdate(fragment);
+        });
+
+        window.addEventListener("hashchange", function (e) {
+            const fragment = window.location.hash.substring(1);
+            windowUpdate(fragment);
+        });
+
+        function parseCSV(page) {
+            let file = "";
+            let idName = "";
+
+            switch(page) {
+                case "music":
+                    file = "media-collection_18-4-2025-music.csv";
+                    idName = "Music";
+                    break;
+                case "movies":
+                    file = "nothing.csv";
+                    idName = "Movies";
+                    break;
+                case "games":
+                    file = "nothing.csv";
+                    idName = "Games";
+                    break;
+            }
+            Papa.parse(file, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    switch(page) {
+                        case "music":
+                            const allData = results.data.filter(row => row.Title && row.Album); // remove empty rows
+                    
+                            const columns = Object.keys(allData[0]).map(col => ({ title: col, data: col }));
+                    
+                            // Define updateSummary *inside* the callback so it sees the 'table'
+                            const table = $('#table' + idName).DataTable({
+                                data: allData,
+                                columns: columns
+                            });
+                    
+                            // Define after table is created
+                            function updateSummary() {
+                            const filteredData = table.rows({ search: 'applied' }).data().toArray();
+                    
+                            const albums = new Set();
+                            let songCount = 0;
+                    
+                            filteredData.forEach(row => {
+                                if (row.Album) albums.add(row.Album.trim());
+                                if (row.Title) songCount++;
+                            });
+                    
+                            document.getElementById("summary" + idName).textContent =
+                                `Albums: ${albums.size} | Songs: ${songCount}`;
+                            }
+                    
+                            // Run once on load
+                            updateSummary();
+                    
+                            // Run every time the table changes (search/filter/etc)
+                            table.on('draw', updateSummary);
+                    }
+                    
+                }
+              });
+        }
+
+        function windowUpdate(page) {
+            switch(page) {
+                case "music":
+                    parseCSV(page);
+            }
+
+            const pages = document.getElementsByClassName("page")
+            for (let i = 0; i < pages.length; i++) {
+                pages[i].style.display = "none";
+            }
+
+            const currentPage = document.getElementById('page_' + page);
+            if (currentPage) {
+                currentPage.style.display = "block";
+                return;
+            }
+        };
+    </script>
+</body>
+</html>
